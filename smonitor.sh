@@ -5,7 +5,7 @@ if [ x$BASH = x ] || [ ! $BASH_VERSINFO ] || [ $BASH_VERSINFO -lt 4 ]; then
 fi
 set -ue
 
-LockFile=smonitor.pid
+LockFile=.smonitor.pid
 ScriptName=$(basename $0)
 
 Usage="Usage: \$ $ScriptName my/cron/dir"
@@ -14,8 +14,8 @@ function main {
   if [[ $# -lt 1 ]] || [[ $1 == '-h' ]]; then
     fail "$Usage"
   fi
-  work_dir=$1
-  lock_path=$work_dir/$LockFile
+  output_dir=$1
+  lock_path=$output_dir/$LockFile
 
   set +e
   if already_running $lock_path; then
@@ -24,23 +24,19 @@ function main {
   set -e
   echo $$ > $lock_path
 
-  html_dir=$work_dir/public_html
-  if ! [[ -d $html_dir ]]; then
-    mkdir -p $html_dir
-  fi
   date=$(date)
 
-  echo -e "As of $date:\n" > $html_dir/jobs.txt
-  squeue -o '%.7i %Q %.8u %.8T %.10M %6h %14R %j' | sort -g -k 2 >> $html_dir/jobs.txt
+  echo -e "As of $date:\n" > $output_dir/jobs.txt
+  squeue -o '%.7i %Q %.8u %.8T %.10M %6h %14R %j' | sort -g -k 2 >> $output_dir/jobs.txt
 
-  echo -e "As of $date:\n" > $html_dir/myjobs.txt
-  squeue -u $USER -o '%.7i %Q %.8u %.8T %.10M %6h %14R %j' >> $html_dir/myjobs.txt
+  echo -e "As of $date:\n" > $output_dir/myjobs.txt
+  squeue -u $USER -o '%.7i %Q %.8u %.8T %.10M %6h %14R %j' >> $output_dir/myjobs.txt
 
-  echo -e "As of $date:\n" > $html_dir/cpus.txt
-  sinfo -h -p general -t idle,alloc -o '%n %C' | tr ' /' '\t\t' | cut -f 1,3 | sort -k 1.3g >> $html_dir/cpus.txt
+  echo -e "As of $date:\n" > $output_dir/cpus.txt
+  sinfo -h -p general -t idle,alloc -o '%n %C' | tr ' /' '\t\t' | cut -f 1,3 | sort -k 1.3g >> $output_dir/cpus.txt
 
-  echo -e "As of $date:\n" > $html_dir/sinfo.txt
-  sinfo >> $html_dir/sinfo.txt
+  echo -e "As of $date:\n" > $output_dir/sinfo.txt
+  sinfo >> $output_dir/sinfo.txt
 
   rm $lock_path
 }
