@@ -1,6 +1,6 @@
 function init() {
   var statusElement = document.getElementById('status');
-  var alertElement = document.getElementById('alert');
+  var ageElement = document.getElementById('age');
 
   var pageName = getPageName();
 
@@ -13,24 +13,24 @@ function init() {
   }
 
   function updateStatus() {
-    alertAge(this.getResponseHeader('Last-Modified'));
+    setAge(this.getResponseHeader('Last-Modified'));
     statusElement.textContent = this.responseText;
   }
 
-  function alertAge(lastModified) {
+  function setAge(lastModified) {
     if (!lastModified) {
-      alertElement.textContent = '';
+      ageElement.textContent = '';
     }
     var lastModifiedTimestamp = Date.parse(lastModified);
     if (!lastModifiedTimestamp) {
-      alertElement.textContent = '';
+      ageElement.textContent = '';
     }
     var lastModifiedDate = new Date(lastModifiedTimestamp);
     var age = (Date.now() - lastModifiedDate.getTime())/1000;
     if (age > 2*60) {
-      alertElement.textContent = 'Warning: This information is '+humanTime(age)+' old!';
+      ageElement.textContent = 'Warning: This information is '+humanTime(age)+' old!';
     } else {
-      alertElement.textContent = '';
+      ageElement.textContent = '';
     }
   }
 
