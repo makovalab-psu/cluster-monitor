@@ -2,13 +2,6 @@ function init() {
   var statusElement = document.getElementById('status');
   var alertElement = document.getElementById('alert');
 
-  function getPageName() {
-    var fields = window.location.pathname.split('/');
-    var base = fields[fields.length-1];
-    fields = base.split('.');
-    return fields[0];
-  }
-
   var pageName = getPageName();
 
   function update() {
@@ -43,6 +36,13 @@ function init() {
 
   update();
   window.setInterval(update, 60000);
+}
+
+function getPageName() {
+  var fields = window.location.pathname.split('/');
+  var base = fields[fields.length-1];
+  fields = base.split('.');
+  return fields[0];
 }
 
 window.addEventListener('load', init);
