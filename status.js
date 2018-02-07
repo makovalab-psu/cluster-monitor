@@ -10,9 +10,6 @@ function main() {
     // has, make the full request. Saves bandwidth when we're getting a long job list every 10 sec.
     // Add timestamp to url to make sure response isn't cached.
     makeRequest('HEAD', checkAgeAndUpdate, pageName+'.txt?time='+Date.now());
-    // Give it 5 seconds, then make sure the age warning is updated, whether or not the request
-    // succeeds.
-    window.setTimeout(updateAge, 5*1000);
   }
 
   function checkAgeAndUpdate() {
@@ -28,7 +25,6 @@ function main() {
     // Called once the XMLHttpRequest has gotten a response.
     statusElement.textContent = this.responseText;
     lastModifiedTimestamp = getAge(ageElement, this.getResponseHeader('Last-Modified'));
-    updateAge();
   }
 
   function updateAge() {
@@ -36,8 +32,11 @@ function main() {
     displayAge(ageElement, lastModifiedTimestamp);
   }
 
+  // Check for new data every 10 seconds.
   update();
   window.setInterval(update, 10*1000);
+  // Update the age display every second.
+  window.setInterval(updateAge, 1*1000);
 }
 
 function getPageName() {
