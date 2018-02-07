@@ -5,23 +5,34 @@ function main() {
   var pageName = getPageName();
 
   function update() {
-    var request = new XMLHttpRequest();
-    request.addEventListener('load', updateStatus);
+    // The main function that's executed every X seconds.
+    // Make a request for the source data. Get the HEAD to check if it's changed, and only if it
+    // has, make the full request. Saves bandwidth when we're getting a long job list every 10 sec.
     // Add timestamp to url to make sure response isn't cached.
-    request.open('GET', pageName+'.txt?time='+Date.now());
-    request.send();
+    makeRequest('HEAD', checkAgeAndUpdate, pageName+'.txt?time='+Date.now());
     // Give it 5 seconds, then make sure the age warning is updated, whether or not the request
-    // returned.
+    // succeeds.
     window.setTimeout(updateAge, 5*1000);
   }
 
+  function checkAgeAndUpdate() {
+    // Check the Last-Modified header, and if it's new, make the full request for the data.
+    var newLastModifiedTimestamp = getAge(ageElement, this.getResponseHeader('Last-Modified'));
+    if (newLastModifiedTimestamp > lastModifiedTimestamp) {
+      makeRequest('GET', updateStatus, pageName+'.txt?time='+Date.now());
+    }
+  }
+
   function updateStatus() {
+    // Insert the new data into the page and update its age.
+    // Called once the XMLHttpRequest has gotten a response.
     statusElement.textContent = this.responseText;
     lastModifiedTimestamp = getAge(ageElement, this.getResponseHeader('Last-Modified'));
     updateAge();
   }
 
   function updateAge() {
+    // Update the data's age.
     displayAge(ageElement, lastModifiedTimestamp);
   }
 
@@ -34,6 +45,14 @@ function getPageName() {
   var base = fields[fields.length-1];
   fields = base.split('.');
   return fields[0];
+}
+
+function makeRequest(method, callback, url) {
+  var request = new XMLHttpRequest();
+  request.addEventListener('load', callback);
+  // Add timestamp to url to make sure response isn't cached.
+  request.open(method, url);
+  request.send();
 }
 
 function getAge(ageElement, lastModified) {
