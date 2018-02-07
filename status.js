@@ -17,8 +17,8 @@ function main() {
 
   function checkAgeAndUpdate() {
     // Check the Last-Modified header, and if it's new, make the full request for the data.
-    var newLastModifiedTimestamp = getAge(ageElement, this.getResponseHeader('Last-Modified'));
-    if (newLastModifiedTimestamp > lastModifiedTimestamp) {
+    var newLastModifiedTimestamp = Date.parse(this.getResponseHeader('Last-Modified'));
+    if (newLastModifiedTimestamp && newLastModifiedTimestamp > lastModifiedTimestamp) {
       makeRequest('GET', updateStatus, pageName+'.txt?time='+Date.now());
     }
   }
