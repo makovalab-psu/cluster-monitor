@@ -59,6 +59,7 @@ function getAge(ageElement, lastModified) {
   if (!lastModified) {
     ageElement.textContent = 'Warning: Information of unknown age!';
     ageElement.style.color = 'red';
+    return null;
   }
   return Date.parse(lastModified);
 }
@@ -67,9 +68,9 @@ function displayAge(ageElement, lastModifiedTimestamp) {
   if (!lastModifiedTimestamp) {
     ageElement.textContent = 'Warning: information of unknown age!';
     ageElement.style.color = 'red';
+    return;
   }
-  var lastModifiedDate = new Date(lastModifiedTimestamp);
-  var age = (Date.now() - lastModifiedDate.getTime())/1000;
+  var age = (Date.now() - lastModifiedTimestamp)/1000;
   if (age > 2*60) {
     ageElement.textContent = 'Warning: This information is '+humanTime(age)+' old!';
     ageElement.style.color = 'red';
