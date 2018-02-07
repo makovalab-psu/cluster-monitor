@@ -1,7 +1,7 @@
-function init() {
+function main() {
   var statusElement = document.getElementById('status');
   var ageElement = document.getElementById('age');
-
+  var lastModifiedTimestamp = null;
   var pageName = getPageName();
 
   function update() {
@@ -13,25 +13,9 @@ function init() {
   }
 
   function updateStatus() {
-    setAge(this.getResponseHeader('Last-Modified'));
     statusElement.textContent = this.responseText;
-  }
-
-  function setAge(lastModified) {
-    if (!lastModified) {
-      ageElement.textContent = '';
-    }
-    var lastModifiedTimestamp = Date.parse(lastModified);
-    if (!lastModifiedTimestamp) {
-      ageElement.textContent = '';
-    }
-    var lastModifiedDate = new Date(lastModifiedTimestamp);
-    var age = (Date.now() - lastModifiedDate.getTime())/1000;
-    if (age > 2*60) {
-      ageElement.textContent = 'Warning: This information is '+humanTime(age)+' old!';
-    } else {
-      ageElement.textContent = '';
-    }
+    lastModifiedTimestamp = getAge(ageElement, this.getResponseHeader('Last-Modified'));
+    displayAge(ageElement, lastModifiedTimestamp);
   }
 
   update();
@@ -43,6 +27,26 @@ function getPageName() {
   var base = fields[fields.length-1];
   fields = base.split('.');
   return fields[0];
+}
+
+function getAge(ageElement, lastModified) {
+  if (!lastModified) {
+    ageElement.textContent = '';
+  }
+  return Date.parse(lastModified);
+}
+
+function displayAge(ageElement, lastModifiedTimestamp) {
+  if (!lastModifiedTimestamp) {
+    ageElement.textContent = '';
+  }
+  var lastModifiedDate = new Date(lastModifiedTimestamp);
+  var age = (Date.now() - lastModifiedDate.getTime())/1000;
+  if (age > 2*60) {
+    ageElement.textContent = 'Warning: This information is '+humanTime(age)+' old!';
+  } else {
+    ageElement.textContent = '';
+  }
 }
 
 function humanTime(seconds) {
@@ -78,4 +82,4 @@ function formatTime(quantity, unit) {
   return output;
 }
 
-window.addEventListener('load', init);
+window.addEventListener('load', main);
