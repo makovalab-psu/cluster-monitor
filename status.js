@@ -81,7 +81,7 @@ function displayAge(ageElement, lastModifiedTimestamp) {
 
 function humanTime(seconds) {
   if (seconds < 60) {
-    return formatTime(seconds, 'second');
+    return formatTime(Math.round(seconds), 'second');
   } else if (seconds < 60*60) {
     return formatTime(seconds/60, 'minute');
   } else if (seconds < 24*60*60) {
