@@ -10,16 +10,23 @@ function main() {
     // Add timestamp to url to make sure response isn't cached.
     request.open('GET', pageName+'.txt?time='+Date.now());
     request.send();
+    // Give it 5 seconds, then make sure the age warning is updated, whether or not the request
+    // returned.
+    window.setTimeout(updateAge, 5*1000);
   }
 
   function updateStatus() {
     statusElement.textContent = this.responseText;
     lastModifiedTimestamp = getAge(ageElement, this.getResponseHeader('Last-Modified'));
+    updateAge();
+  }
+
+  function updateAge() {
     displayAge(ageElement, lastModifiedTimestamp);
   }
 
   update();
-  window.setInterval(update, 60000);
+  window.setInterval(update, 10*1000);
 }
 
 function getPageName() {
@@ -31,14 +38,14 @@ function getPageName() {
 
 function getAge(ageElement, lastModified) {
   if (!lastModified) {
-    ageElement.textContent = '';
+    ageElement.textContent = 'Warning: Information of unknown age!';
   }
   return Date.parse(lastModified);
 }
 
 function displayAge(ageElement, lastModifiedTimestamp) {
   if (!lastModifiedTimestamp) {
-    ageElement.textContent = '';
+    ageElement.textContent = 'Warning: information of unknown age!';
   }
   var lastModifiedDate = new Date(lastModifiedTimestamp);
   var age = (Date.now() - lastModifiedDate.getTime())/1000;
