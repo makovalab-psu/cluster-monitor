@@ -27,13 +27,14 @@ function main {
   date=$(date)
 
   echo -e "As of $date:\n" > $output_dir/jobs.txt
-  squeue -o '%.7i %Q %.8u %.8T %.10M %6h %14R %j' | sort -g -k 2 >> $output_dir/jobs.txt
+  squeue -o '%.7i %Q %.8u %.8T %.11M %6h %14R %j' | sort -g -k 2 >> $output_dir/jobs.txt
 
   echo -e "As of $date:\n" > $output_dir/myjobs.txt
-  squeue -u $USER -o '%.7i %Q %.8u %.8T %.10M %6h %14R %j' >> $output_dir/myjobs.txt
+  squeue -u $USER -o '%.7i %Q %.8u %.8T %.11M %6h %14R %j' >> $output_dir/myjobs.txt
 
-  echo -e "As of $date:\n" > $output_dir/cpus.txt
-  sinfo -h -p general -t idle,alloc -o '%n %C' | tr ' /' '\t\t' | cut -f 1,3 | sort -k 1.3g >> $output_dir/cpus.txt
+  echo -e "As of $date:\n\nNode\tFree\tTotal" > $output_dir/cpus.txt
+  sinfo -h -p general -t idle,alloc -o '%n %C' | tr ' /' '\t\t' | cut -f 1,3,5 | sort -k 1.3g \
+    | sed -E 's/\.c\.bx\.psu\.edu//' >> $output_dir/cpus.txt
 
   echo -e "As of $date:\n" > $output_dir/sinfo.txt
   sinfo >> $output_dir/sinfo.txt
