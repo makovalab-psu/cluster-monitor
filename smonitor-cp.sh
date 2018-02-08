@@ -5,9 +5,9 @@ if [ x$BASH = x ] || [ ! $BASH_VERSINFO ] || [ $BASH_VERSINFO -lt 4 ]; then
 fi
 set -ue
 
-SourceDefault=/galaxy/home/nick/cron/public_html
-DestDefault=/afs/bx.psu.edu/user/n/nick/public_html
-PAUSE_DEFAULT=1m
+PauseDefault=1m
+SourceDefault=$HOME/cron/public_html
+DestDefault=/afs/bx.psu.edu/user/${USER:0:1}/$USER/public_html
 
 if [[ $HOME == ${SourceDefault:0:${#HOME}} ]]; then
   src_abbrv=~${SourceDefault:${#HOME}}
@@ -15,19 +15,25 @@ else
   src_abbrv=$SourceDefault
 fi
 
-Usage="Usage: \$ $(basename $0) source/ destination/ [pause]
+Usage="Usage: \$ $(basename $0) [source [destination [pause]]]
 This script copies any files in source/ to destination/ every [pause] seconds.
 It's the daemon that dies all the time and has to be run manually, like so:
 \$ nohup ~/code/smonitor-cp.sh $src_abbrv $DestDefault >/dev/null 2>/dev/null &"
 
 function main {
-  if [[ $# -lt 2 ]] || [[ $1 == '-h' ]]; then
+  if [[ $# -ge 1 ]] && ([[ $1 == '-h' ]] || [[ $1 == '--help' ]]); then
     fail "$Usage"
   fi
 
-  source=$1
-  dest=$2
-  pause=$PAUSE_DEFAULT
+  source="$SourceDefault"
+  dest="$DestDefault"
+  pause="$PauseDefault"
+  if [[ $# -ge 1 ]]; then
+    source="$1"
+  fi
+  if [[ $# -ge 2 ]]; then
+    dest="$2"
+  fi
   if [[ $# -ge 3 ]]; then
     pause=$3
   fi
