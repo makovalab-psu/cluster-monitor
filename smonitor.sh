@@ -6,6 +6,8 @@ fi
 set -ue
 
 USER=${USER:-nick}
+SqueueHeader='  JOBID PRIORITY     USER    STATE        TIME   MEM SHARED NODE           NAME'
+SqueueFormat='%.7i %.8Q %.8u %.8T %.11M %.5m %6h %14R %j'
 LockFile=.smonitor.pid
 ScriptName=$(basename $0)
 
@@ -27,11 +29,11 @@ function main {
 
   date=$(date)
 
-  echo -e "As of $date:\n" > $output_dir/jobs.txt
-  squeue -o '%.7i %.8Q %.8u %.8T %.11M %6h %14R %j' | sort -g -k 2 >> $output_dir/jobs.txt
+  echo -e "As of $date:\n\n$SqueueHeader" > $output_dir/jobs.txt
+  squeue -h -o "$SqueueFormat" | sort -g -k 2 >> $output_dir/jobs.txt
 
-  echo -e "As of $date:\n" > $output_dir/myjobs.txt
-  squeue -u $USER -o '%.7i %.8Q %.8u %.8T %.11M %6h %14R %j' >> $output_dir/myjobs.txt
+  echo -e "As of $date:\n\n$SqueueHeader" > $output_dir/myjobs.txt
+  squeue -h -o "$SqueueFormat" -u $USER >> $output_dir/myjobs.txt
 
   echo -e "As of $date:\n\nNode\tFree\tTotal" > $output_dir/cpus.txt
   sinfo -h -p general -t idle,alloc -o '%n %C' | tr ' /' '\t\t' | cut -f 1,3,5 | sort -k 1.3g \
