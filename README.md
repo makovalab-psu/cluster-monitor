@@ -16,56 +16,60 @@ If you place the html files in the same `public_html` directory the `smonitor.sh
 
 ## Setup
 
-### Create a Kerberos keytab
+### Quick and simple
 
-We want to run `smonitor.sh` automatically from a cron job, but commands run from there don't have permission to alter the `public_html` directory. The solution is to create a "keytab" file, which contains Kerberos credentials to access that directory.
+The cron job that runs `smonitor.sh` isn't able to actually write the status files directly to `public_html`, because of permissions.
 
-The following commands will create a file `cron.keytab` in `$HOME/cron` (but you can put it wherever you want).
+A simple workaround is to have it write its files to some directory it does have permissions for, and manually launch `smonitor-cp.sh` in the background, which will periodically copy the files to your `public_html`.
 
-You'll have to enter your BX password each time you run the command.
-
-#TODO: figure out commands that actually work.
-```bash
-mkdir -p $HOME/cron
-ktutil -k $HOME/cron/cron.keytab add -V 1 -p $USER/cron@BX.PSU.EDU -e arcfour-hmac-md5
-ktutil -k $HOME/cron/cron.keytab add -V 2 -p $USER/cron@BX.PSU.EDU -e aes256-cts-hmac-sha1-96
-ktutil -k $HOME/cron/cron.keytab add -V 4 -p $USER/cron@BX.PSU.EDU -e des-cbc-crc
-```
-
-### Set up the cron job
-
-The cron job will run `smonitor.sh` every minute, printing the cluster status to text files in your `public_html` directory.
-
-First, create a subdirectory in `public_html` for the files to live in:
-`$ mkdir -p ~/public_html/monitor`
-
-Then, run crontab to edit your cron jobs:
-`$ crontab -e`
-Go to the end, and add this line:
-```
-* * * * * kinit -t $HOME/cron/cron.keytab $USER/cron@BX.PSU.EDU bash $HOME/code/monitor/smonitor.sh $HOME/public_html/monitor
-```
-But replace `$HOME` with the path to your AFS home directory, and `$USER` with your username. If your `cron.keytab` or `smonitor.sh` file aren't at those paths, change them.
-
-For example, this is the line in my crontab:
-```
-* * * * * kinit -t /etc/keytabs/nick/cron.keytab nick/cron@BX.PSU.EDU bash /galaxy/home/nick/code/smonitor.sh /afs/bx.psu.edu/user/n/nick/public_html/monitor
-```
-
-### Non-Kerberos alternative
-
-If you can't get it to work with a Kerberos keytab, an alternative is to have the cron job write its files to some directory it does have permissions for, and run `smonitor-cp.sh` in the background, which will periodically copy the files to your `public_html`.
+#### Set up cron job
 
 First, create a directory cron can write the files to. One that worked for me is my `/galaxy/home` directory:
 `$ mkdir -p /galaxy/home/$USER/cron/monitor`
 
-Then, use this crontab line instead of the one above:
-```
+Then, run crontab to edit your cron jobs:
+`$ crontab -e`
+Go to the end, and add this line:
+```bash
 * * * * * bash $HOME/code/monitor/smonitor.sh /galaxy/home/$USER/cron/monitor
 ```
-Again, replace $HOME with your AFS home (or wherever the script is), and $USER with your username.
+But replace $HOME with your home directory (or wherever the script is), and $USER with your username.  
+For example:
+```bash
+* * * * * bash /afs/bx.psu.edu/user/n/nick/code/monitor/smonitor.sh /galaxy/home/nick/cron/monitor
+```
 
-Then, while logged into an ssh session on desmond, launch `smonitor-cp.sh` in the background. Use `nohup` to protect it from dying when you log out or if the ssh session dies:
-`nohup ~/code/smonitor-cp.sh /galaxy/home/$USER/cron/monitor ~/public_html/monitor 10 >/dev/null 2>/dev/null &`
+#### Launch file copying daemon
+
+Then, while logged into an ssh session on Desmond, launch `smonitor-cp.sh` in the background. Use `nohup` to protect it from dying when you log out or if the ssh session dies:
+`$ nohup ~/code/monitor/smonitor-cp.sh /galaxy/home/$USER/cron/monitor ~/public_html/monitor 10 >/dev/null 2>/dev/null &`
+- The `10` tells it to wake up every 10 seconds to check for new files.
 
 This should keep running for about a week or so, until the Kerberos ticket for your ssh session expires. Then, you'll have to re-launch `smonitor-cp.sh`.
+
+### Longterm solution
+
+Remembering to relaunch `smonitor-cp.sh` periodically can be annoying, and results in lots of downtime when you forget. There is a way to make the process totally automated from cron, but it requires using the black magic of Kerberos authentication.
+
+#### Set up Kerberos permissions and create keytab
+
+Unfortunately, for this option, you'll have to bother the BX admins. Here are the things they need to do, taken from Rico's notes (replace "nick" with your username):
+- Create a new Kerberos principal `nick/cron` and a corresponding `nick.cron` user in AFS
+- Extract a keytab for `nick/cron` and place it in `/etc/keytabs/nick/cron.keytab` on Desmond
+- Allow `nick.cron` to cd to `/afs/bx.psu.edu/user/n/nick/public_html`
+  - `$ fs setacl /afs/bx.psu.edu/user/n/nick nick.cron l`
+  - `$ fs setacl /afs/bx.psu.edu/user/n/nick/public_html nick.cron l`
+- Create a new directory for `nick.cron` to write to, and add appropriate permissions
+  - `$ mkdir /afs/bx.psu.edu/user/n/nick/public_html/monitor`
+  - `$ chown nick:nick /afs/bx.psu.edu/user/n/nick/public_html/monitor`
+  - `$ fs setacl /afs/bx.psu.edu/user/n/nick/public_html/monitor nick.cron rlidwk`
+
+#### Set up cron job
+
+Run crontab to edit your cron jobs:
+`$ crontab -e`
+Go to the end, and add this line:
+```bash
+* * * * * kinit -t /etc/keytabs/$USER/cron.keytab $USER/cron@BX.PSU.EDU bash $HOME/code/monitor/smonitor.sh $HOME/public_html/monitor
+```
+Again, replace `$HOME` with the path to your AFS home directory, and `$USER` with your username. If your `cron.keytab` or `smonitor.sh` file aren't at those paths, change them.
