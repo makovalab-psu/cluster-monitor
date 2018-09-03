@@ -14,11 +14,58 @@ Because I wanted to try something fancy, and because I'd always get tricked by o
 
 If you place the html files in the same `public_html` directory the `smonitor.sh` script writes to, then you can view, say, `jobs.html` in your browser and it'll periodically pull the `jobs.txt` output of `smonitor.sh`. It checks how old the text file is and displays the age to the user. There's a different html file for each of the status text files.
 
-## Permissions issues
+## Setup
 
- The way the Kerberos authentication and the permissions of the `public_html` directory interact mean that your cron job probably won't be able to write directly to `public_html`. As a workaround, you can have it write to a directory elsewhere that it does have access to (like `/galaxy/home/$USER`). Then you can just launch `smonitor-cp.sh` in the background manually. This wakes up every minute and copies the `smonitor.sh` output to `public_html`.
+### Create a Kerberos keytab
 
-The ideal solution is instead to get the Kerberos permissions worked out so your cron job can write directly to your `public_html`. Rico knows how to do this and I'm not sure about the details, but at least you can see the cron line I use:  
+We want to run `smonitor.sh` automatically from a cron job, but commands run from there don't have permission to alter the `public_html` directory. The solution is to create a "keytab" file, which contains Kerberos credentials to access that directory.
+
+The following commands will create a file `cron.keytab` in `$HOME/cron` (but you can put it wherever you want).
+
+You'll have to enter your BX password each time you run the command.
+
+#TODO: figure out commands that actually work.
+```bash
+mkdir -p $HOME/cron
+ktutil -k $HOME/cron/cron.keytab add -V 1 -p $USER/cron@BX.PSU.EDU -e arcfour-hmac-md5
+ktutil -k $HOME/cron/cron.keytab add -V 2 -p $USER/cron@BX.PSU.EDU -e aes256-cts-hmac-sha1-96
+ktutil -k $HOME/cron/cron.keytab add -V 4 -p $USER/cron@BX.PSU.EDU -e des-cbc-crc
 ```
-* * * * * /usr/bin/k5start -U -f /etc/keytabs/nick/cron.keytab -t -K 60 bash /galaxy/home/nick/code/smonitor.sh /afs/bx.psu.edu/user/n/nick/public_html/monitor
+
+### Set up the cron job
+
+The cron job will run `smonitor.sh` every minute, printing the cluster status to text files in your `public_html` directory.
+
+First, create a subdirectory in `public_html` for the files to live in:
+`$ mkdir -p ~/public_html/monitor`
+
+Then, run crontab to edit your cron jobs:
+`$ crontab -e`
+Go to the end, and add this line:
 ```
+* * * * * kinit -t $HOME/cron/cron.keytab $USER/cron@BX.PSU.EDU bash $HOME/code/monitor/smonitor.sh $HOME/public_html/monitor
+```
+But replace `$HOME` with the path to your AFS home directory, and `$USER` with your username. If your `cron.keytab` or `smonitor.sh` file aren't at those paths, change them.
+
+For example, this is the line in my crontab:
+```
+* * * * * kinit -t /etc/keytabs/nick/cron.keytab nick/cron@BX.PSU.EDU bash /galaxy/home/nick/code/smonitor.sh /afs/bx.psu.edu/user/n/nick/public_html/monitor
+```
+
+### Non-Kerberos alternative
+
+If you can't get it to work with a Kerberos keytab, an alternative is to have the cron job write its files to some directory it does have permissions for, and run `smonitor-cp.sh` in the background, which will periodically copy the files to your `public_html`.
+
+First, create a directory cron can write the files to. One that worked for me is my `/galaxy/home` directory:
+`$ mkdir -p /galaxy/home/$USER/cron/monitor`
+
+Then, use this crontab line instead of the one above:
+```
+* * * * * bash $HOME/code/monitor/smonitor.sh /galaxy/home/$USER/cron/monitor
+```
+Again, replace $HOME with your AFS home (or wherever the script is), and $USER with your username.
+
+Then, while logged into an ssh session on desmond, launch `smonitor-cp.sh` in the background. Use `nohup` to protect it from dying when you log out or if the ssh session dies:
+`nohup ~/code/smonitor-cp.sh /galaxy/home/$USER/cron/monitor ~/public_html/monitor 10 >/dev/null 2>/dev/null &`
+
+This should keep running for about a week or so, until the Kerberos ticket for your ssh session expires. Then, you'll have to re-launch `smonitor-cp.sh`.
