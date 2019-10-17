@@ -6,8 +6,6 @@ fi
 set -ue
 
 USER=${USER:-nick}
-SqueueHeader='  JOBID PRIORITY     USER    STATE        TIME   MEM SHARED NODE           NAME'
-SqueueFormat='%10P %.7i %.8Q %.8u %.8T %.11M %.5m %6h %14R %j'
 LockFile=.smonitor.pid
 ScriptName=$(basename "$0")
 
@@ -29,25 +27,46 @@ function main {
 
   date=$(date)
 
-  echo -e "As of $date:\n\n$SqueueHeader" > "$output_dir/jobs.txt"
-  squeue -h -o "$SqueueFormat" \
-    | awk '$1 != "girirajan" {print substr($0, 12)}' \
-    | sort -g -k 2 >> "$output_dir/jobs.txt"
+  print_jobs "$date" > "$output_dir/jobs.txt"
 
-  echo -e "As of $date:\n\n$SqueueHeader" > "$output_dir/myjobs.txt"
-  squeue -h -o "$SqueueFormat" -u "$USER" >> "$output_dir/myjobs.txt"
+  print_jobs "$date" "$USER" > "$output_dir/myjobs.txt"
 
-  echo -e "As of $date:\n" > "$output_dir/cpus.txt"
-  echo -e "\tTotal\tFree\tFree" >> "$output_dir/cpus.txt"
-  echo -e "Node\tCPUs\tCPUs\tMem (GB)" >> "$output_dir/cpus.txt"
-  sinfo -h -p general -t idle,alloc -o '%n %C %e' | tr '/' ' ' \
-    | awk '{split($1, fields, "."); printf("%s\t%d\t%d\t%3.0f\n", fields[1], $5, $3, $6/1024)}' \
-    | sort -k 2g -k 1 >> "$output_dir/cpus.txt"
+  print_cpus "$date" > "$output_dir/cpus.txt"
 
-  echo -e "As of $date:\n" > "$output_dir/sinfo.txt"
-  sinfo >> "$output_dir/sinfo.txt"
+  print_sinfo "$date" > "$output_dir/sinfo.txt"
 
   rm "$lock_path"
+}
+
+function print_jobs {
+  date="$1"
+  if [[ "$#" -ge 2 ]]; then
+    user_arg="-u $2"
+  else
+    user_arg=
+  fi
+  echo "As of $date:"
+  echo
+  echo '  JOBID PRIORITY     USER    STATE        TIME   MEM SHARED NODE           NAME'
+  squeue -h -p general $user_arg -o '%.7i %.8Q %.8u %.8T %.11M %.5m %6h %14R %j' | sort -g -k 2
+}
+
+function print_cpus {
+  date="$1"
+  echo "As of $date:"
+  echo
+  echo -e "\tTotal\tFree\tFree"
+  echo -e "Node\tCPUs\tCPUs\tMem (GB)"
+  sinfo -h -p general -t idle,alloc -o '%n %C %e' | tr '/' ' ' \
+    | awk '{split($1, fields, "."); printf("%s\t%d\t%d\t%3.0f\n", fields[1], $5, $3, $6/1024)}' \
+    | sort -k 2g -k 1
+}
+
+function print_sinfo {
+  date="$1"
+  echo "As of $date:"
+  echo
+  sinfo
 }
 
 function already_running {
