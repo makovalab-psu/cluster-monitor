@@ -37,9 +37,12 @@ function main {
   echo -e "As of $date:\n\n$SqueueHeader" > "$output_dir/myjobs.txt"
   squeue -h -o "$SqueueFormat" -u "$USER" >> "$output_dir/myjobs.txt"
 
-  echo -e "As of $date:\n\nNode\tFree\tTotal" > "$output_dir/cpus.txt"
-  sinfo -h -p general -t idle,alloc -o '%n %C' | tr ' /' '\t\t' | cut -f 1,3,5 | sort -k 1.3g \
-    | sed -E 's/\.c\.bx\.psu\.edu//' >> "$output_dir/cpus.txt"
+  echo -e "As of $date:\n" > "$output_dir/cpus.txt"
+  echo -e "\tTotal\tFree\tFree" >> "$output_dir/cpus.txt"
+  echo -e "Node\tCPUs\tCPUs\tMem (GB)" >> "$output_dir/cpus.txt"
+  sinfo -h -p general -t idle,alloc -o '%n %C %e' | tr '/' ' ' \
+    | awk '{split($1, fields, "."); printf("%s\t%d\t%d\t%3.0f\n", fields[1], $5, $3, $6/1024)}' \
+    | sort -k 2g -k 1 >> "$output_dir/cpus.txt"
 
   echo -e "As of $date:\n" > "$output_dir/sinfo.txt"
   sinfo >> "$output_dir/sinfo.txt"
