@@ -47,8 +47,9 @@ function print_jobs {
   fi
   echo "As of $date:"
   echo
-  echo '  JOBID PRIORITY     USER      STATE        TIME     MEM SHARED NODE           NAME'
-  squeue -h -p general $user_arg -o '%.7i %.8Q %.8u %.10T %.11M %.7m %6h %14R %j' | sort -g -k 2
+  echo '  JOBID PRIORITY     USER      STATE        TIME     MEM CPUS SHARED NODE           NAME'
+  squeue -h -p general $user_arg -o '%.7i %.8Q %.8u %.10T %.11M %.7m %.4C %6h %14R %j' \
+    | sort -g -k 2
 }
 
 function print_cpus {
