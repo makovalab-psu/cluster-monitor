@@ -56,11 +56,12 @@ function print_cpus {
   date="$1"
   echo "As of $date:"
   echo
-  echo -e "\tTotal\tFree\tFree"
-  echo -e "Node\tCPUs\tCPUs\tMem (GB)"
-  sinfo -h -p general -t idle,alloc -o '%n %C %e' | tr '/' ' ' \
-    | awk '{split($1, fields, "."); printf("%s\t%d\t%d\t%3.0f\n", fields[1], $5, $3, $6/1024)}' \
-    | sort -k 2g -k 1
+  echo -e    "\t     CPUs\t  Mem (GB)"
+  echo -e "Node\tTotal\tFree\tTotal\tFree"
+  sinfo --noheader --Node --partition general --states idle,alloc \
+      --Format nodelist,memory,allocmem,freemem,cpusstate \
+    | tr '/' ' ' \
+    | awk -v OFS='\t' '{print $1, $8, $6, $2/1024, ($2-$3)/1024}'
 }
 
 function print_sinfo {
