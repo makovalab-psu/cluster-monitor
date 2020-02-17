@@ -61,7 +61,7 @@ function print_cpus {
   sinfo --noheader --Node --partition general --states idle,alloc \
       --Format nodelist,memory,allocmem,freemem,cpusstate \
     | tr '/' ' ' \
-    | awk -v OFS='\t' '{print $1, $8, $6, $2/1024, ($2-$3)/1024}'
+    | awk -v OFS='\t' '{printf("%-8s%4d%7d%9.0f%7.0f\n", $1, $8, $6, $2/1024, ($2-$3)/1024)}'
 }
 
 function print_sinfo {
